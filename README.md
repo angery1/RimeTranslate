@@ -74,7 +74,7 @@ C:\Users\你的用户名\RimeTranslate\
    └─ INSTALL_EN.md
 ```
 
-**判断是否解压正确：**打开 `C:\Users\你的用户名\RimeTranslate\` 后，应当立刻看到 `RimeTranslate.exe` 和 `Install.cmd`。
+**判断是否解压正确:** 打开 `C:\Users\你的用户名\RimeTranslate\` 后，应当立刻看到 `RimeTranslate.exe` 和 `Install.cmd`。
 
 不要出现：
 
