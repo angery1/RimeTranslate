@@ -1,4 +1,4 @@
-param([string]$Version = "2.2.0")
+param([string]$Version = "2.2.1")
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
@@ -14,8 +14,12 @@ Copy-Item (Join-Path $root "rime") $pkg -Recurse
 Copy-Item (Join-Path $root "scripts\install.ps1") $pkg
 Copy-Item (Join-Path $root "scripts\check-environment.ps1") $pkg
 Copy-Item (Join-Path $root "README.md") $pkg
+Copy-Item (Join-Path $root "README_EN.md") $pkg
 Copy-Item (Join-Path $root "LICENSE") $pkg
 Copy-Item (Join-Path $root "THIRD_PARTY_NOTICES.md") $pkg
+New-Item -ItemType Directory -Force -Path (Join-Path $pkg "docs") | Out-Null
+Copy-Item (Join-Path $root "docs\INSTALL_CN.md") (Join-Path $pkg "docs")
+Copy-Item (Join-Path $root "docs\INSTALL_EN.md") (Join-Path $pkg "docs")
 
 $installCmd = @'
 @echo off

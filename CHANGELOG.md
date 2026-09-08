@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.2.1 - 2026-09-08
+
+- 重构 README，将功能、下载、快速安装放到前面，详细说明移入 docs。
+- README 增加中文 / English 双语切换。
+- Release 包同时携带 README.md、README_EN.md 和中英文详细安装文档。
+- 首次安装且不存在 `rime_ice.custom.yaml` 时自动创建 RimeTranslate 配置。
+- 已存在个人 `rime_ice.custom.yaml` 时不覆盖，生成 `RimeTranslate.patch.to_merge.yaml` 供手工合并。
+- 增加本地 AI 架构可扩展性说明。
+
 ## v2.2.0 - 2026-09-08
 
 - 模型驻留时间调整为 2 分钟。

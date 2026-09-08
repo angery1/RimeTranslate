@@ -33,7 +33,9 @@ jobs:
           Copy-Item rime $stage -Recurse
           Copy-Item scripts\install.ps1 $stage
           Copy-Item scripts\check-environment.ps1 $stage
-          Copy-Item README.md,LICENSE,THIRD_PARTY_NOTICES.md $stage
+          Copy-Item README.md,README_EN.md,LICENSE,THIRD_PARTY_NOTICES.md $stage
+          New-Item -ItemType Directory -Force "$stage\docs" | Out-Null
+          Copy-Item docs\INSTALL_CN.md,docs\INSTALL_EN.md "$stage\docs"
           $installCmd = @'
           @echo off
           powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1"
@@ -48,8 +50,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" `
-            "dist\RimeTranslate-${{ github.ref_name }}-windows-x64.zip" `
-            "dist\SHA256SUMS.txt" `
-            --generate-notes `
-            --title "RimeTranslate ${{ github.ref_name }}"
+          $notesFile = "docs\releases\${{ github.ref_name }}.md"
+          if (Test-Path $notesFile) {
+            gh release create "${{ github.ref_name }}" `
+              "dist\RimeTranslate-${{ github.ref_name }}-windows-x64.zip" `
+              "dist\SHA256SUMS.txt" `
+              --notes-file $notesFile `
+              --title "RimeTranslate ${{ github.ref_name }}"
+          } else {
+            gh release create "${{ github.ref_name }}" `
+              "dist\RimeTranslate-${{ github.ref_name }}-windows-x64.zip" `
+              "dist\SHA256SUMS.txt" `
+              --generate-notes `
+              --title "RimeTranslate ${{ github.ref_name }}"
