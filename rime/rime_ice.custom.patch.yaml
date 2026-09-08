@@ -1,0 +1,17 @@
+# Merge the keys below into your existing %APPDATA%\Rime\rime_ice.custom.yaml
+# Do NOT blindly replace an existing file if you already have personal patches.
+
+patch:
+  "switches/+":
+    - name: ollama_translation
+      reset: 0
+      states: [ 翻译关, 翻译开 ]
+
+  "key_binder/bindings/+":
+    - { when: always, accept: Control+Shift+Y, toggle: ollama_translation }
+
+  "engine/processors/@before 0":
+    lua_processor@*async_refresh
+
+  "engine/filters/@before last":
+    lua_filter@*async_ollama_filter

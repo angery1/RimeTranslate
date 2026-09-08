@@ -1,0 +1,28 @@
+# Build output
+/dist/
+*.exe
+*.zip
+*.log
+
+# Local workspace / third-party clones
+/_third_party_sources/
+/third_party/src/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local configs / secrets
+config.local.json
+.env
+
+# Rime generated data (never commit user data)
+build/
+userdb/
+*.userdb/
+*.userdb.kct.snapshot
+installation.yaml
+user.yaml

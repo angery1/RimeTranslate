@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+
+      - name: Build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          go build -trimpath -ldflags="-H=windowsgui -s -w" -o dist\RimeTranslate.exe ./src
+
+      - name: Assemble release package
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $stage = "dist\package\RimeTranslate"
+          New-Item -ItemType Directory -Force $stage | Out-Null
+          Copy-Item dist\RimeTranslate.exe $stage
+          Copy-Item rime $stage -Recurse
+          Copy-Item scripts\install.ps1 $stage
+          Copy-Item scripts\check-environment.ps1 $stage
+          Copy-Item README.md,LICENSE,THIRD_PARTY_NOTICES.md $stage
+          $installCmd = @'
+          @echo off
+          powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1"
+          pause
+          '@
+          $installCmd | Set-Content "$stage\Install.cmd" -Encoding ASCII
+          Compress-Archive -Path $stage -DestinationPath "dist\RimeTranslate-v$version-windows-x64.zip" -CompressionLevel Optimal
+          Get-FileHash "dist\RimeTranslate-v$version-windows-x64.zip" -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  RimeTranslate-v$version-windows-x64.zip" } | Set-Content "dist\SHA256SUMS.txt"
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" `
+            "dist\RimeTranslate-${{ github.ref_name }}-windows-x64.zip" `
+            "dist\SHA256SUMS.txt" `
+            --generate-notes `
+            --title "RimeTranslate ${{ github.ref_name }}"

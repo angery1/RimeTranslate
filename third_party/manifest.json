@@ -1,0 +1,17 @@
+{
+  "runtime_or_recommended": [
+    {"name":"Rime Weasel","repo":"https://github.com/rime/weasel","license":"GPL-3.0","bundled":false},
+    {"name":"rime-ice","repo":"https://github.com/iDvel/rime-ice","license":"GPL-3.0-only","bundled":false},
+    {"name":"librime-lua","repo":"https://github.com/hchunhui/librime-lua","license":"BSD-3-Clause","bundled":false},
+    {"name":"Ollama","repo":"https://github.com/ollama/ollama","license":"MIT","bundled":false}
+  ],
+  "model": {
+    "name":"gemma3:1b",
+    "source":"https://ollama.com/library/gemma3",
+    "terms":"Gemma Terms of Use",
+    "bundled":false
+  },
+  "reference_only": [
+    {"name":"RIMES","repo":"https://github.com/scholay/rimes","license":"MIT for RIMES-authored code; bundled data has separate licenses","bundled":false}
+  ]
+}
