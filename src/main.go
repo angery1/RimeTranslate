@@ -166,6 +166,7 @@ type Bridge struct {
 	ollamaCmd     *exec.Cmd
 	startedByUs   bool
 	lastActivity  time.Time
+	lastHandled   string
 	warnedMissing bool
 	stopped       bool
 }
@@ -173,21 +174,11 @@ type Bridge struct {
 func newBridge() *Bridge {
 	dir := filepath.Join(os.TempDir(), "rime_ollama_bridge")
 	_ = os.MkdirAll(dir, 0755)
-
-	requestFile := filepath.Join(dir, "request.txt")
-	responseFile := filepath.Join(dir, "response.txt")
-	tempFile := filepath.Join(dir, "response.tmp")
-
-	// Clear responses from a previous process instance. request.txt is kept so a
-	// legitimate request written by Rime just before the bridge starts is not lost.
-	_ = os.Remove(responseFile)
-	_ = os.Remove(tempFile)
-
 	return &Bridge{
 		dir:          dir,
-		requestFile:  requestFile,
-		responseFile: responseFile,
-		tempFile:     tempFile,
+		requestFile:  filepath.Join(dir, "request.txt"),
+		responseFile: filepath.Join(dir, "response.txt"),
+		tempFile:     filepath.Join(dir, "response.tmp"),
 		logFile:      filepath.Join(dir, "bridge.log"),
 		client:       &http.Client{Timeout: 25 * time.Second},
 		lastActivity: time.Now(),
@@ -216,15 +207,14 @@ func (b *Bridge) run() {
 		}
 		b.mu.Unlock()
 
+		b.stopOwnedOllamaIfIdle()
+
 		data, err := os.ReadFile(b.requestFile)
 		if err != nil {
-			b.stopOwnedOllamaIfIdle()
 			continue
 		}
 		text := strings.TrimSpace(string(data))
-		if text == "" {
-			_ = os.Remove(b.requestFile)
-			b.stopOwnedOllamaIfIdle()
+		if text == "" || text == b.lastHandled {
 			continue
 		}
 
@@ -240,20 +230,10 @@ func (b *Bridge) run() {
 			continue
 		}
 
+		b.lastHandled = snapshot
 		if err := b.translateAndRespond(snapshot); err != nil {
 			b.logf("translate error: %v", err)
-			// Keep the request file so a temporary Ollama/startup failure can retry,
-			// but back off so we do not hammer the local service.
-			time.Sleep(750 * time.Millisecond)
-			continue
-		}
-
-		// Treat request.txt as a tiny single-slot queue. Remove it only if it
-		// still contains the request we just handled. If Rime wrote a newer
-		// candidate while Ollama was running, leave that newer request intact.
-		currentBytes, err := os.ReadFile(b.requestFile)
-		if err == nil && strings.TrimSpace(string(currentBytes)) == snapshot {
-			_ = os.Remove(b.requestFile)
+			b.lastHandled = "" // allow retry
 		}
 	}
 }
@@ -447,9 +427,7 @@ func (b *Bridge) releaseResources() {
 		_ = cmd.Process.Kill()
 		b.logf("stopped owned ollama server")
 	}
-	_ = os.Remove(b.requestFile)
 	_ = os.Remove(b.responseFile)
-	_ = os.Remove(b.tempFile)
 }
 
 func (b *Bridge) stopOwnedOllamaIfIdle() {

@@ -4,14 +4,7 @@ local bridge_dir = temp_dir .. "\\rime_ollama_bridge"
 local request_file  = bridge_dir .. "\\request.txt"
 local response_file = bridge_dir .. "\\response.txt"
 
-local function file_exists(path)
-    local f = io.open(path, "rb")
-    if f then
-        f:close()
-        return true
-    end
-    return false
-end
+local last_requested = ""
 
 local function request_translation(text)
     -- RimeTranslate.exe creates bridge_dir at startup.
@@ -55,33 +48,12 @@ local function is_translatable(s)
     return has_han(s) or has_latin(s)
 end
 
-local function init(env)
-    env.last_requested = ""
-
-    -- Reset request suppression whenever the Rime translation switch changes,
-    -- even if the user toggles it while no composition is active.
-    env.option_connection = env.engine.context.option_update_notifier:connect(
-        function(_, name)
-            if name == "ollama_translation" then
-                env.last_requested = ""
-            end
-        end
-    )
-end
-
-local function fini(env)
-    if env.option_connection then
-        env.option_connection:disconnect()
-        env.option_connection = nil
-    end
-end
-
 local function filter(input, env)
     local context = env.engine.context
 
-    -- Translation OFF: pure pass-through. No Ollama request.
+    -- Translation OFF: pure pass-through. No file I/O, no Ollama request.
     if not context:get_option("ollama_translation") then
-        env.last_requested = ""
+        last_requested = ""
         for cand in input:iter() do
             yield(cand)
         end
@@ -98,27 +70,24 @@ local function filter(input, env)
             local text = cand.text
 
             if is_translatable(text) then
-                local source, translation = read_translation()
-                local response_ok = source == text
-                    and translation
-                    and translation ~= ""
-                    and translation ~= text
-
-                -- If the old response was released/removed, allow the same text to
-                -- be requested again. request.txt acts as the pending-request marker.
-                if not response_ok
-                    and (text ~= env.last_requested or not file_exists(request_file)) then
+                if text ~= last_requested then
                     if request_translation(text) then
-                        env.last_requested = text
+                        last_requested = text
                     end
                 end
+
+                local source, translation = read_translation()
 
                 -- Candidate #1 stays the original text.
                 yield(cand)
 
                 -- Insert translation as candidate #2 only when the response belongs
                 -- to the current first candidate.
-                if response_ok then
+                if source == text
+                    and translation
+                    and translation ~= ""
+                    and translation ~= text then
+
                     local translated = Candidate(
                         "ollama_translation",
                         cand.start,
@@ -137,4 +106,4 @@ local function filter(input, env)
     end
 end
 
-return { init = init, func = filter, fini = fini }
+return { func = filter }
