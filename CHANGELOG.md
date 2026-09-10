@@ -1,10 +1,13 @@
 # Changelog
 
-## v2.2.1 - 2026-09-08
+## v2.2.1 - 2026-09-10
 
 - 重构 README，将功能、下载、快速安装放到前面，详细说明移入 docs。
 - README 增加中文 / English 双语切换。
-- Release 包同时携带 README.md、README_EN.md 和中英文详细安装文档。
+- README 增加项目在 Windows 上的真实运行截图：中文 → 英文、英文 → 中文、翻译开关。
+- 新增 `docs/MODELS.md`，说明不同本地模型的模型包大小、资源取舍和部署建议。
+- 默认推荐 `gemma3:1b`；低资源场景推荐 `qwen2.5:0.5b`；质量优先可考虑 `qwen2.5:1.5b`。
+- Release 包同时携带 README.md、README_EN.md、中英文安装文档、模型说明和功能截图。
 - 首次安装且不存在 `rime_ice.custom.yaml` 时自动创建 RimeTranslate 配置。
 - 已存在个人 `rime_ice.custom.yaml` 时不覆盖，生成 `RimeTranslate.patch.to_merge.yaml` 供手工合并。
 - 增加本地 AI 架构可扩展性说明。
