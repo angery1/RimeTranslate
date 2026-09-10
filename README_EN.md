@@ -2,39 +2,60 @@
 
 [中文](README.md) | **English**
 
-> Show **bidirectional Chinese ↔ English translations directly in the Rime/Weasel candidate list on Windows**.  
-> Chinese candidate → English; English candidate → Chinese. Translation runs through a local Ollama model and is kept off the synchronous Rime candidate-generation path.
+> Show **bidirectional Chinese ↔ English translation directly inside the Rime/Weasel candidate list on Windows**.  
+> Chinese candidate → English; English candidate → Chinese. Translation is powered by a local Ollama model through an asynchronous bridge.
 
-[Latest Release](https://github.com/angery1/RimeTranslate/releases/latest) · [Detailed installation](docs/INSTALL_EN.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+[Latest Release](https://github.com/angery1/RimeTranslate/releases/latest) · [Detailed installation](docs/INSTALL_EN.md) · [Model guide](docs/MODELS.md)
 
-## Preview
+## Real screenshots
 
-| Chinese → English | English → Chinese |
-| --- | --- |
-| `nihaoshijie` → `1 你好世界` → `2 Hello world 🌐` | `hello` → `1 hello` → `2 你好 🌐` |
+All screenshots below are from the project running on Windows.
 
-> The README is intended to use **real Windows screenshots**. To avoid presenting a fabricated UI as a real run, the repository currently keeps the text preview above until real screenshots are added under `docs/images/`.
+### Chinese → English
 
-## Prerequisites
+![Chinese to English: 基本设置 / Basic settings](docs/images/candidate-zh-to-en.png)
 
-Install these separately:
+### English → Chinese
+
+Stay in the rime-ice Chinese input mode so the English text becomes a Rime candidate:
+
+![English to Chinese: infrastructure / 基础设施](docs/images/candidate-en-to-zh.png)
+
+### Translation toggle
+
+Use `Ctrl + Shift + Y` to switch translation on/off:
+
+![Translation toggle](docs/images/translation-toggle.png)
+
+## Key features
+
+- Automatic Chinese ↔ English direction detection;
+- translated result appears directly in the Rime candidate list;
+- asynchronous Ollama bridge, so AI inference does not synchronously block normal Rime candidate generation;
+- local inference by default, without relying on an online translation website;
+- `gemma3:1b` remains loaded for about 2 minutes to reduce repeated cold starts;
+- tray command for immediately releasing translation resources;
+- per-user Windows startup support.
+
+## Quick start
+
+### 1. Install prerequisites
+
+Install separately:
 
 1. [Rime Weasel](https://github.com/rime/weasel)
 2. [rime-ice](https://github.com/iDvel/rime-ice)
 3. [Ollama](https://github.com/ollama/ollama)
-4. `gemma3:1b`
 
-Then run:
+Then download the default model:
 
 ```powershell
 ollama pull gemma3:1b
 ```
 
-You do not need to keep an `ollama run` terminal open. RimeTranslate connects to or starts Ollama on demand.
+> Ollama must be installed, but you do **not** need to keep an `ollama run` terminal open or enable Ollama at Windows startup. RimeTranslate connects to or starts Ollama when translation is needed.
 
-## Quick start
-
-### 1. Download the Release package
+### 2. Download and extract the Release
 
 Open [Releases](https://github.com/angery1/RimeTranslate/releases/latest) and download:
 
@@ -42,17 +63,15 @@ Open [Releases](https://github.com/angery1/RimeTranslate/releases/latest) and do
 RimeTranslate-vX.Y.Z-windows-x64.zip
 ```
 
-Do **not** use `Code → Download ZIP`; that is the source archive.
+Do not use `Code → Download ZIP`; that is the source archive.
 
-### 2. Extract to the correct directory
-
-The Release ZIP already contains a top-level `RimeTranslate` folder. The easiest method is to extract the ZIP directly to:
+The Release ZIP already contains a top-level `RimeTranslate` directory. The easiest method is to extract it directly to:
 
 ```text
 C:\Users\YOUR_NAME\
 ```
 
-The result must look like this:
+The final layout should be:
 
 ```text
 C:\Users\YOUR_NAME\RimeTranslate\
@@ -69,16 +88,12 @@ C:\Users\YOUR_NAME\RimeTranslate\
 │     └─ async_refresh.lua
 └─ docs\
    ├─ INSTALL_CN.md
-   └─ INSTALL_EN.md
+   ├─ INSTALL_EN.md
+   ├─ MODELS.md
+   └─ images\
 ```
 
-If `RimeTranslate.exe` and `Install.cmd` are immediately visible inside that directory, extraction is correct.
-
-Avoid nested layouts such as:
-
-```text
-RimeTranslate\RimeTranslate\RimeTranslate.exe
-```
+If `RimeTranslate.exe` and `Install.cmd` are immediately visible in `C:\Users\YOUR_NAME\RimeTranslate\`, extraction is correct. Avoid nested layouts such as `RimeTranslate\RimeTranslate\...`.
 
 ### 3. Run the installer
 
@@ -88,15 +103,7 @@ Double-click:
 Install.cmd
 ```
 
-It will:
-
-- install the two Rime Lua files;
-- back up existing files with the same names;
-- enable current-user startup for `RimeTranslate.exe`;
-- start the background bridge;
-- **create the required `rime_ice.custom.yaml` automatically if you do not already have one.**
-
-If you already have a customized `rime_ice.custom.yaml`, the installer will not overwrite it. Follow [the detailed installation guide](docs/INSTALL_EN.md#what-if-rime_icecustomyaml-already-exists) instead.
+The installer copies the Lua files, backs up files with the same names, enables startup for RimeTranslate, and starts the bridge. If `rime_ice.custom.yaml` does not exist, it creates the required configuration automatically. Existing personalized YAML files are never overwritten; see [the detailed installation guide](docs/INSTALL_EN.md).
 
 ### 4. Redeploy Weasel
 
@@ -112,32 +119,35 @@ Press:
 Ctrl + Shift + Y
 ```
 
-to toggle translation on/off.
+to toggle translation.
 
-Chinese → English: type Pinyin normally.
+Chinese → English: type Pinyin normally.  
+English → Chinese: stay in the **rime-ice Chinese input mode** so English is handled as a Rime candidate. Pure ASCII passthrough bypasses the candidate filter and therefore cannot receive a translation candidate.
 
-English → Chinese: stay in the **rime-ice Chinese input mode** so English becomes a Rime candidate. Pure ASCII passthrough bypasses the candidate filter and therefore cannot receive a translation candidate.
+## Model recommendations
 
-## Features
+The current Release defaults to **`gemma3:1b`**. Package sizes below come from the Ollama model library. “Suggested free system memory” is an **engineering guideline for this short-text use case, not an official requirement**. Actual RAM/VRAM usage varies with quantization, context length, CPU/GPU offload, and Ollama version.
 
-- Automatic Chinese ↔ English direction detection;
-- translation appears inside the candidate list instead of a separate popup;
-- asynchronous Ollama bridge so AI inference does not synchronously block normal candidate generation;
-- `gemma3:1b` stays loaded for about 2 minutes by default to reduce repeated cold starts;
-- tray command to release translation resources immediately;
-- per-user Windows startup support;
-- local inference by default.
+| Model | Ollama package | Suggested free RAM | Character | Recommendation |
+| --- | ---: | ---: | --- | --- |
+| `gemma3:270m` | 292 MB | 1–2 GB | lightest / fastest, weaker quality | very low-end systems |
+| `qwen2.5:0.5b` | 398 MB | 2–3 GB | lightweight, good fit for Chinese/English | low-resource pick |
+| **`gemma3:1b`** | **815 MB** | **3–4 GB** | balanced speed / quality / memory | **default pick** |
+| `qwen2.5:1.5b` | 986 MB | 4–6 GB | stronger quality focus | quality-oriented pick |
+| `qwen2.5:3b` | 1.9 GB | 6–8 GB | better quality, more latency and memory | resource-rich systems |
+| `gemma3:4b` | 3.3 GB | 8–12 GB | heavier; limited benefit for an IME | not a default choice |
 
-## Resource usage
+CPU-only execution is supported. When a compatible GPU is available, Ollama can offload model work to GPU. Run:
 
-The model stays loaded for about **2 minutes** during active use to reduce repeated cold starts.
-
-Before running Vivado, simulations, or other memory-heavy workloads, use:
-
-```text
-Right-click Rime Translate tray icon
-→ Release translation resources
+```powershell
+ollama ps
 ```
+
+to inspect whether a loaded model is using `100% CPU`, `100% GPU`, or a CPU/GPU split.
+
+> If you also use Vivado, synthesis, or large simulations, `gemma3:1b` or `qwen2.5:0.5b` is preferable. Before a memory-heavy task, right-click the Rime Translate tray icon and choose **Release translation resources**.
+
+The current binary has the model name in `src/main.go` as `modelName`; using another model currently requires changing that value and rebuilding. See [docs/MODELS.md](docs/MODELS.md).
 
 ## How it works
 
@@ -148,41 +158,31 @@ async_ollama_filter.lua
         ↓ request.txt
 RimeTranslate.exe
         ↓
-Ollama + gemma3:1b
+Ollama + local model
         ↓ response.txt
 async_refresh.lua + candidate refresh
         ↓
 translated candidate
 ```
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
+See [Architecture](docs/ARCHITECTURE.md) for details.
 
 ## Extensibility
 
 RimeTranslate is not fundamentally limited to translation. Its core pipeline is:
 
 ```text
-Rime candidate
-→ local background bridge
-→ local AI model
-→ inject processed result back into the candidate list
+Rime candidate → local background bridge → local AI model → inject result back into the candidate list
 ```
 
-Because the backend is a **local AI model**, the project can be modified or extended by changing the prompt, model, and result handling. Possible directions include:
+Because the backend is a local AI model, the project can be extended by changing the prompt, model, and result handling—for example multilingual translation, English polishing, grammar correction, shortening/expanding text, technical-term explanations, fixed-style rewriting, or other Ollama/local inference backends.
 
-- multilingual translation;
-- English polishing and grammar correction;
-- shortening or expanding text;
-- technical-term explanations;
-- domain-specific terminology conversion;
-- style rewriting;
-- other Ollama models or local inference backends.
-
-Chinese ↔ English translation is therefore only the first application of the architecture.
+**Chinese ↔ English translation is only the first application of this architecture.**
 
 ## More documentation
 
 - [Detailed installation](docs/INSTALL_EN.md)
+- [Model selection and resource guide](docs/MODELS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Development](docs/DEVELOPMENT.md)
 - [Changelog](CHANGELOG.md)
@@ -191,7 +191,7 @@ Chinese ↔ English translation is therefore only the first application of the a
 ## Known limitations
 
 - Currently focused on Windows x64;
-- English → Chinese requires the active Rime schema to produce English candidates;
+- English → Chinese requires the active Rime schema to generate English candidates;
 - full English sentences containing spaces are not yet ideal for the current candidate pipeline;
 - the first model load is usually slower than translations while the model remains resident;
 - Lua ↔ Bridge IPC currently uses local files and may later move to Named Pipes or another local IPC mechanism.
