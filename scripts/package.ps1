@@ -17,9 +17,13 @@ Copy-Item (Join-Path $root "README.md") $pkg
 Copy-Item (Join-Path $root "README_EN.md") $pkg
 Copy-Item (Join-Path $root "LICENSE") $pkg
 Copy-Item (Join-Path $root "THIRD_PARTY_NOTICES.md") $pkg
+
 New-Item -ItemType Directory -Force -Path (Join-Path $pkg "docs") | Out-Null
 Copy-Item (Join-Path $root "docs\INSTALL_CN.md") (Join-Path $pkg "docs")
 Copy-Item (Join-Path $root "docs\INSTALL_EN.md") (Join-Path $pkg "docs")
+Copy-Item (Join-Path $root "docs\MODELS.md") (Join-Path $pkg "docs")
+New-Item -ItemType Directory -Force -Path (Join-Path $pkg "docs\images") | Out-Null
+Copy-Item (Join-Path $root "docs\images\*") (Join-Path $pkg "docs\images") -Recurse
 
 $installCmd = @'
 @echo off
