@@ -2,6 +2,10 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - 'VERSION'
     tags:
       - 'v*'
 
@@ -11,11 +15,29 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23.x'
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $tag = "${{ github.ref_name }}"
+          } else {
+            $versionFromFile = (Get-Content VERSION -Raw).Trim()
+            if (-not $versionFromFile) { throw "VERSION is empty" }
+            $tag = "v$versionFromFile"
+          }
+          $version = $tag.TrimStart('v')
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Release tag: $tag"
 
       - name: Build
         shell: pwsh
@@ -26,40 +48,67 @@ jobs:
       - name: Assemble release package
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}".TrimStart('v')
+          $version = "${{ steps.version.outputs.version }}"
           $stage = "dist\package\RimeTranslate"
+          Remove-Item "dist\package" -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force $stage | Out-Null
+
           Copy-Item dist\RimeTranslate.exe $stage
           Copy-Item rime $stage -Recurse
           Copy-Item scripts\install.ps1 $stage
           Copy-Item scripts\check-environment.ps1 $stage
           Copy-Item README.md,README_EN.md,LICENSE,THIRD_PARTY_NOTICES.md $stage
+
           New-Item -ItemType Directory -Force "$stage\docs" | Out-Null
-          Copy-Item docs\INSTALL_CN.md,docs\INSTALL_EN.md "$stage\docs"
+          Copy-Item docs\INSTALL_CN.md,docs\INSTALL_EN.md,docs\MODELS.md "$stage\docs"
+          New-Item -ItemType Directory -Force "$stage\docs\images" | Out-Null
+          Copy-Item docs\images\* "$stage\docs\images" -Recurse
+
           $installCmd = @'
           @echo off
           powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1"
           pause
           '@
           $installCmd | Set-Content "$stage\Install.cmd" -Encoding ASCII
-          Compress-Archive -Path $stage -DestinationPath "dist\RimeTranslate-v$version-windows-x64.zip" -CompressionLevel Optimal
-          Get-FileHash "dist\RimeTranslate-v$version-windows-x64.zip" -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  RimeTranslate-v$version-windows-x64.zip" } | Set-Content "dist\SHA256SUMS.txt"
 
-      - name: Create GitHub Release
+          $zip = "dist\RimeTranslate-v$version-windows-x64.zip"
+          Compress-Archive -Path $stage -DestinationPath $zip -CompressionLevel Optimal
+          Get-FileHash $zip -Algorithm SHA256 | ForEach-Object {
+            "$($_.Hash)  RimeTranslate-v$version-windows-x64.zip"
+          } | Set-Content "dist\SHA256SUMS.txt"
+
+      - name: Create or update GitHub Release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $notesFile = "docs\releases\${{ github.ref_name }}.md"
-          if (Test-Path $notesFile) {
-            gh release create "${{ github.ref_name }}" `
-              "dist\RimeTranslate-${{ github.ref_name }}-windows-x64.zip" `
-              "dist\SHA256SUMS.txt" `
-              --notes-file $notesFile `
-              --title "RimeTranslate ${{ github.ref_name }}"
+          $tag = "${{ steps.version.outputs.tag }}"
+          $version = "${{ steps.version.outputs.version }}"
+          $zip = "dist\RimeTranslate-v$version-windows-x64.zip"
+          $notesFile = "docs\releases\$tag.md"
+
+          gh release view $tag *> $null
+          $releaseExists = ($LASTEXITCODE -eq 0)
+
+          if ($releaseExists) {
+            gh release upload $tag $zip "dist\SHA256SUMS.txt" --clobber
+            if (Test-Path $notesFile) {
+              gh release edit $tag --title "RimeTranslate $tag" --notes-file $notesFile --latest
+            } else {
+              gh release edit $tag --title "RimeTranslate $tag" --latest
+            }
           } else {
-            gh release create "${{ github.ref_name }}" `
-              "dist\RimeTranslate-${{ github.ref_name }}-windows-x64.zip" `
-              "dist\SHA256SUMS.txt" `
-              --generate-notes `
-              --title "RimeTranslate ${{ github.ref_name }}"
+            if (Test-Path $notesFile) {
+              gh release create $tag $zip "dist\SHA256SUMS.txt" `
+                --target "${{ github.sha }}" `
+                --notes-file $notesFile `
+                --title "RimeTranslate $tag" `
+                --latest
+            } else {
+              gh release create $tag $zip "dist\SHA256SUMS.txt" `
+                --target "${{ github.sha }}" `
+                --generate-notes `
+                --title "RimeTranslate $tag" `
+                --latest
+            }
+          }
